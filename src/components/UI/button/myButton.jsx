@@ -6,6 +6,7 @@ const MyButton = ({children, addNewPost, ...props}) => {
         <button onClick={addNewPost} className={s.myBtn}>
             {children}
         </button>
+        
     )
 }
 

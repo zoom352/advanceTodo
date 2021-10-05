@@ -1,66 +1,60 @@
+import { BrowserRouter, Switch, Route } from 'react-router-dom';
 import './App.css';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import PostList from './components/UI/postList';
-import MyButton from './components/UI/button/myButton';
-import MyInput from './components/UI/input/MyInput';
-import Postform from './components/UI/postform.jsx';
-import MySelect from './components/UI/select/MySelect';
-import PostFilter from './components/UI/postFilter';
-import MyModal from './components/UI/MyModal/MyModal';
-import { usePosts } from './hooks/usePosts';
-import axios from 'axios';
-import PostService from './API/PostService';
-import { useFetching } from './hooks/useFetching';
+import { privateRoute, publicRoutes } from './components/route/route';
+import Navbar from './components/UI/Navbar/Navbar';
+import { Redirect } from 'react-router';
+import { AuthContext } from './context';
+import { useState } from 'react/cjs/react.development';
+import { useEffect } from 'react';
 
 
 
 function App() {
 
-  const [posts, setPosts] = useState([])
-  const [filter, setFilter] = useState({ sort: '', search: '' })
-  const [modal, setModal] = useState(false)
-  const sortedAndSearchPosts = usePosts(posts, filter.sort, filter.search)
-  // const [isPostFetching, setIsPostFetching] = useState(false)
-  const [fetchPosts, isPostFetching, postError] = useFetching(async () => {
-  const response = await PostService.getAll();
-    setPosts(response.data)
-  })
+  const [isAuth, setIsAuth] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-
-  useEffect( () => {
-    fetchPosts()
+  useEffect(() => {
+    if(localStorage.getItem('auth')) {
+      setIsAuth(true)
+    } 
+    setLoading(false)
   }, [])
 
-  // получаем post из дочернего элемента
-  const removePost = (post) => {
-    setPosts(posts.filter(p => p.id !== post.id))
+  if(loading) {
+    return <p>loading</p>
   }
-
-
-  const createPost = (newPost) => {
-    setPosts([...posts, newPost])
-    setModal(false)
-  }
-
 
   return (
-    <div className="App">
-      
-      <button style={{marginTop: '30px'}} onClick={() => setModal(true)}>
-        Create users
-      </button>
-      <MyModal visible={modal} setVisible={setModal}>
-        <Postform createPost={createPost}/>
-      </MyModal>
-      <hr style={{ margin: '15px 0' }} />
-      <PostFilter filter={filter} setFilter={setFilter}/>
-      {postError && 
-          <h1>the mistake was made ${postError}</h1>}
+    <AuthContext.Provider value={{
+      isAuth,
+      setIsAuth,
+      loading
+    }}>
+      <BrowserRouter>
+        <Navbar />
+        {isAuth
+          ?
+          <Switch>
+            {privateRoute.map(r =>
+              <Route component={r.component} path={r.path}
+                exact={r.exact} 
+                key={r.path}/>
+            )}
+            <Redirect to='/posts' />
+          </Switch> :
+          <Switch>
+            {publicRoutes.map(pub =>
+              <Route component={pub.component} path={pub.path}
+                exact={pub.exact} 
+                key={pub.path}/>
+            )}
+            <Redirect to='/login' />
+          </Switch>}
+      </BrowserRouter>
+    </AuthContext.Provider>
+  )
 
-        {isPostFetching ? <h1>Loading</h1> : <PostList removePost={removePost} posts={sortedAndSearchPosts}
-          title='Кол-во постов' />}
-    </div>
-  );
 }
 
 export default App;
